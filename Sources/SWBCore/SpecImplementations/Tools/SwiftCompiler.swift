@@ -3134,6 +3134,30 @@ public final class SwiftCompilerSpec : CompilerSpec, SpecIdentifierType, SwiftDi
                 let bitcodeFilePath = objectFileDir.join(objectFilePrefix + ".bc")
                 fileMapEntry.llvmBitcode = bitcodeFilePath.str
             }
+
+            // Add code size profiling outputs if enabled
+            let emitSIL = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_EMIT_SIL_FILES)")) == "YES"
+            let emitIR = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_EMIT_IR_FILES)")) == "YES"
+            let silOutputDir: Path? = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_SIL_OUTPUT_DIR)")).nilIfEmpty.map { Path($0) }
+            let irOutputDir: Path? = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_IR_OUTPUT_DIR)")).nilIfEmpty.map { Path($0) }
+            let optRecordOutputDir: Path? = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_OPT_RECORD_OUTPUT_DIR)")).nilIfEmpty.map { Path($0) }
+
+            if emitSIL {
+                let silFilePath = (silOutputDir ?? objectFileDir).join(objectFilePrefix + ".sil")
+                fileMapEntry.sil = silFilePath.str
+            }
+
+            if emitIR {
+                let irFilePath = (irOutputDir ?? objectFileDir).join(objectFilePrefix + ".ll")
+                fileMapEntry.llvmIR = irFilePath.str
+            }
+
+            let emitOptRecords = cbc.scope.evaluate(cbc.scope.namespace.parseString("$(SWIFT_EMIT_OPT_RECORDS)")) == "YES"
+            if emitOptRecords {
+                let optRecordFilePath = (optRecordOutputDir ?? objectFileDir).join(objectFilePrefix + ".opt.yaml")
+                fileMapEntry.yamlOptRecord = optRecordFilePath.str
+            }
+
             return (objectFilePath, fileMapEntry)
         }
 
@@ -3867,6 +3891,9 @@ struct SwiftOutputFileMap: Codable {
         var swiftmodule: String?
         var constValues: String?
         var pch: String?
+        var sil: String?
+        var llvmIR: String?
+        var yamlOptRecord: String?
 
         enum CodingKeys: String, CodingKey {
             case object
@@ -3881,6 +3908,9 @@ struct SwiftOutputFileMap: Codable {
             case swiftmodule
             case constValues = "const-values"
             case pch
+            case sil
+            case llvmIR = "llvm-ir"
+            case yamlOptRecord = "yaml-opt-record"
         }
     }
 
